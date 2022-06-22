@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "esnext",
+    "lib": ["dom"],
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "lib",
+    "baseUrl": "src",
+    "paths": {
+      "*": ["node_modules/*", "src/types/*"]
+    },
+    "noEmitHelpers": false
+  },
+  "include": ["src/**/*"]
+}
