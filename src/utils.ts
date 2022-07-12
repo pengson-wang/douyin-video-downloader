@@ -1,5 +1,4 @@
-//@ts-nocheck contains evaluted scripts for page
-import { Browser, Page } from "./types.ts";
+import { Browser, Page } from "https://deno.land/x/puppeteer@14.1.1/mod.ts";
 
 function sleep(seconds: number) {
   return new Promise((resolve) => {
@@ -71,16 +70,16 @@ async function getVideoURLs(page: Page) {
     }
 
     let list: Array<string> = [];
-    let count = 1;
-    const max = 10;
-    while (list.length === 0 && count < max) {
+    let delay = 10
+    let count = 100
+    while (list.length === 0 && count -- > 0) {
       console.log(`#${count} querying source...`);
       list = Array.from(
         document.querySelectorAll<HTMLAnchorElement>(
           'a[href*="www.douyin.com/video"]'
         )
       ).map((a) => a.href);
-      await sleep(1);
+      await sleep(delay);
       count++;
     }
     return list;
@@ -117,7 +116,7 @@ async function autoScroll(page: Page) {
           clearInterval(timer);
           resolve(0);
         }
-      }, 1000);
+      }, 5000);
     });
   });
 }

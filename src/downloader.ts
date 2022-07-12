@@ -1,6 +1,7 @@
 import * as path from "https://deno.land/std@0.144.0/path/mod.ts";
 import * as fs from "https://deno.land/std@0.144.0/node/fs/promises.ts";
 import { copy } from "https://deno.land/std@0.144.0/streams/conversion.ts";
+import { readerFromStreamReader } from "https://deno.land/std@0.147.0/streams/mod.ts";
 
 enum WorkerState {
   initialized,
@@ -36,16 +37,20 @@ export interface Target {
 }
 
 export class Downloader {
-  dir: string;
-  max: number;
+  private dir: string;
+  private max: number;
+  private isStarted: boolean
 
   _urls: Array<Target> = [];
   _workers: Array<Worker> = [];
   _urls_interval: number | undefined;
   _workers_interval: number | undefined;
-  constructor(dir: string, max = 5) {
+  constructor(dir: string, max = 5, isStarted = false) {
     this.dir = dir;
     this.max = max;
+    if(isStarted) {
+      this.start()
+    }
   }
   add(...targets: Target[]) {
     console.log(`before add: ${this._urls.length}`);
@@ -55,7 +60,7 @@ export class Downloader {
   batchAdd(targets: Target[]) {
     Array.prototype.push.apply(this._urls, targets);
   }
-  async download(url: string, filename: string, force = false) {
+  private async download(url: string, filename: string, force = false) {
     console.log("Entering Download");
     if (!force) {
       try {
@@ -74,18 +79,16 @@ export class Downloader {
       `Downloading ${url} to ${path.joinGlobs([this.dir, filename])}`
     );
     try {
-      const resp = await fetch(url, {
-        headers: {
-          ["User-Agent"]:
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.9999.0 Safari/537.36",
-        },
-      });
+      const resp = await fetch(url);
+      console.log(`response.status=${resp.status}`)
       if (resp.ok) {
         const file = await Deno.create(path.joinGlobs([this.dir, filename]));
-        if (resp.body) {
-          const reader = resp.body.getReader();
-          //@ts-ignore type incompatile in core
-          await copy(reader, file);
+        const rdr = resp.body?.getReader()
+        if (rdr) {
+          const r = readerFromStreamReader(rdr)
+          await copy(r, file);
+        } else {
+          throw new Error('failed to get reader from resp')
         }
       } else {
         console.warn(resp.statusText);
@@ -97,6 +100,10 @@ export class Downloader {
     }
   }
   async start() {
+    if(this.isStarted) {
+      return Promise.resolve()
+    }
+    this.isStarted = true
     try {
       const stats = await fs.stat(this.dir);
       if (!stats.isDirectory()) {
@@ -107,25 +114,25 @@ export class Downloader {
     }
 
     this._urls_interval = setInterval(() => {
-      console.info(
-        `workers.length=${this._workers.length} urls.length=${this._urls.length}`
-      );
+      // console.info(
+      //   `workers.length=${this._workers.length} urls.length=${this._urls.length}`
+      // );
       if (this._workers.length < this.max) {
         const target = this._urls.shift();
         if (target) {
           const { url, filename } = target;
           const worker = new Worker(() => async () => {
             console.log("job started");
-            return await this.download(url, filename);
+            return await this.download(url, filename, true);
           });
           this._workers.push(worker);
         }
       }
     }, 500);
     this._workers_interval = setInterval(() => {
-      console.info(
-        `workers.length=${this._workers.length} urls.length=${this._urls.length}`
-      );
+      // console.info(
+      //   `workers.length=${this._workers.length} urls.length=${this._urls.length}`
+      // );
       for (const worker of this._workers) {
         if (worker.state === WorkerState.initialized) {
           console.log("starting worker");
@@ -153,11 +160,13 @@ export class Downloader {
   }
 
   pause() {
+    this.isStarted = false
     clearInterval(this._urls_interval);
     clearInterval(this._workers_interval);
   }
 
   stop() {
+    this.isStarted = false
     clearInterval(this._urls_interval);
     clearInterval(this._workers_interval);
   }
