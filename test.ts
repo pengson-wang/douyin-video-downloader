@@ -29,7 +29,7 @@ async function downloadAll(url: string, config: Config) {
   const targets = await Promise.all(videoPageURLs.map(async pageURL => {
     const videoURL = await resolver.resolveVideoResource(pageURL)
     const filename = urlToFilename(pageURL);
-    return {filename: filename, url: videoURL}
+    return {filename: filename, url: videoURL!}
   }))
   await resolver.destory()
 
@@ -62,8 +62,7 @@ async function download(url: string, config: Config) {
   });
   const resolver = new Resolver(browser, config)
   const videoURL = await resolver.resolveVideoResource(url)
-  console.log(videoURL)
-  const target = {filename: urlToFilename(url), url: videoURL }
+  const target = {filename: urlToFilename(url), url: videoURL! }
   await resolver.destory()
 
   const downloader = new Downloader(config.downloader.dir, config.downloader.max, true)
@@ -96,5 +95,5 @@ async function download(url: string, config: Config) {
       dir: path.joinGlobs([home_dir() || ".", "douyin-x"]),
       max: 5,
     },})
-  await download("https://v.douyin.com/2LJvKk5/", config)
+  await download("https://v.douyin.com/2tcFUht/", config)
 })();

@@ -40,10 +40,6 @@ export default class Resolver {
         return await getVideoSource(page);
     }
 
-    isVideoPage() {
-
-    }
-
     isHomePage(url: string) {
         return url.includes("user");
     }

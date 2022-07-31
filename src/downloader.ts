@@ -39,7 +39,7 @@ export interface Target {
 export class Downloader {
   private dir: string;
   private max: number;
-  private isStarted: boolean
+  private isStarted: boolean = false
 
   _urls: Array<Target> = [];
   _workers: Array<Worker> = [];
